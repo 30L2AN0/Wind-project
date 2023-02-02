@@ -22,7 +22,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	camera_controller_orbit_euler camera_control;
 
 	camera_projection_perspective camera_projection; // uncomment this line for projective perspective
-	//camera_projection_orthographic camera_projection; // uncomment this line for orthographic projection
+	// camera_projection_orthographic camera_projection; // uncomment this line for orthographic projection
 
 	window_structure window;
 
@@ -42,7 +42,10 @@ struct scene_structure : cgp::scene_inputs_generic {
 	numarray<numarray<vec3>> sketches;
 
 	curve_drawable grid;
-	curve_drawable_dynamic_extend normals;
+	numarray<numarray<vec3>> velocities;
+	numarray<numarray<vec3>> accelerations;
+	curve_drawable_dynamic_extend velocities_drawable;
+	curve_drawable_dynamic_extend accelerations_drawable;
 
 	mesh_drawable fish;
 
@@ -60,7 +63,9 @@ struct scene_structure : cgp::scene_inputs_generic {
 	void keyboard_event();
 	void idle_frame();
 
-	void compute_tangents();
+	void compute_velocities();
+	// void smooth_the_curve();
+	float dist(vec3 a, vec3 b);
 };
 
 
