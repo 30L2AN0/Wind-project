@@ -2,6 +2,7 @@
 #include "path_info.hpp"
 
 #include <iostream>
+#include <fstream>
 
 using namespace cgp;
 
@@ -158,11 +159,23 @@ void scene_structure::mouse_click_event()
     }
 }
 
-void scene_structure::compute_velocities() {
+void scene_structure::compute_velocities(numarray<numarray<vec3>>& points, numarray<numarray<vec3>>& vels, curve_drawable_dynamic_extend& vel_drawable, float coef, bool print) {
+    // for python optimization
+    // if (print) {
+        std::ofstream logFile("accelerations");
+        logFile << sketches.size() << std::endl;
+    // }
+    
     for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
         // float resolution = 7;
         numarray<vec3> curve = sketches[i_sketch];
+        numarray<vec3> point_set = points[i_sketch];
         int n = curve.size();
+
+        // if (print) {
+            logFile << n << std::endl;
+        // }
+        vels.push_back(numarray<vec3>());
 
         // for (float i_point = 1; i_point < resolution; ++i_point) {
         //     int i_cur = i_point / resolution * n;
@@ -172,15 +185,13 @@ void scene_structure::compute_velocities() {
             float const sigma = 0.001;
 
             vec3 vel(0.0f, 0.0f, 0.0f);
-            // vec3 accel(0.0f, 0.0f, 0.0f);
 
             float sum_w = 0.0;
             int j = i_cur;
             while (j > 0 && j + 1 < n && dist(curve[i_cur], curve[j]) <= 3 * sigma) {
                 float d = dist(curve[i_cur], curve[j]);
                 float w = exp(-d * d / (sigma * sigma));
-                vel += w * (curve[j] - curve[j - 1]);
-                // accel += w * (curve[j + 1] - 2 * curve[j] + curve[j - 1]);
+                vel += w * (point_set[j] - point_set[j - 1]);
                 sum_w += w;
                 ++j;
             }
@@ -189,21 +200,24 @@ void scene_structure::compute_velocities() {
             while (j > 0 && j + 1 < n && dist(curve[i_cur], curve[j - 1]) <= 3 * sigma) {
                 float d = dist(curve[i_cur], curve[j - 1]);
                 float w = exp(-d * d / (sigma * sigma));
-                vel += w * (curve[j] - curve[j - 1]);
-                // accel += w * (curve[j + 1] - 2 * curve[j] + curve[j - 1]);
+                vel += w * (point_set[j] - point_set[j - 1]);
                 sum_w += 1;
                 --j;
             }
 
             vel /= sum_w;
+            
+            // if (print) {
+                logFile << curve[i_cur] << ";" << vel << std::endl;
+            // }
 
-            velocities_drawable.push_back(curve[i_cur]);
-            velocities_drawable.push_back(vel * 20 + curve[i_cur]);
-
-            // accelerations_drawable.push_back(curve[i_cur]);
-            // accelerations_drawable.push_back(curve[i_cur] + accel * 20);
+            vels[i_sketch].push_back(vel);
+            vel_drawable.push_back(curve[i_cur]);
+            vel_drawable.push_back(vel * coef + curve[i_cur]);
         }
     }
+
+    logFile.close();
 }
 
 void scene_structure::keyboard_event()
@@ -212,7 +226,8 @@ void scene_structure::keyboard_event()
 
     if (inputs.keyboard.is_pressed(GLFW_KEY_T)) {
         std::cout << "T is pressed, let's show tangents" << std::endl;
-        compute_velocities();
+        compute_velocities(sketches, velocities, velocities_drawable, 20.);
+        compute_velocities(velocities, accelerations, accelerations_drawable, 140., true);
     }
 
     // if (inputs.keyboard.is_pressed(GLFW_KEY_R)) {

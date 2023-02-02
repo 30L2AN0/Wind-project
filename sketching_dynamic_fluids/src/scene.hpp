@@ -63,7 +63,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	void keyboard_event();
 	void idle_frame();
 
-	void compute_velocities();
+	void compute_velocities(numarray<numarray<vec3>>&, numarray<numarray<vec3>>&, curve_drawable_dynamic_extend&, float, bool print = false);
 	// void smooth_the_curve();
 	float dist(vec3 a, vec3 b);
 };
