@@ -35,13 +35,16 @@ struct scene_structure : cgp::scene_inputs_generic {
 	// Elements and shapes of the scene
 	// ****************************** //
 
+	cgp::timer_basic timer;
+
 	// Store the curve sketched on screen. 
-	//   Each new stroke (continuous click+motion of the mouse) is a new element of the buffer
+	// Each new stroke (continuous click+motion of the mouse) is a new element of the buffer
 	cgp::numarray<cgp::curve_drawable_dynamic_extend> sketch_drawable;
 	// save the curve elements
 	numarray<numarray<vec3>> sketches;
 
 	curve_drawable grid;
+	numarray<numarray<float>> dtimes;
 	numarray<numarray<vec3>> velocities;
 	numarray<numarray<vec3>> accelerations;
 	curve_drawable_dynamic_extend velocities_drawable;
@@ -63,7 +66,7 @@ struct scene_structure : cgp::scene_inputs_generic {
 	void keyboard_event();
 	void idle_frame();
 
-	void compute_velocities(numarray<numarray<vec3>>&, numarray<numarray<vec3>>&, curve_drawable_dynamic_extend&, float, bool print = false);
+	void compute_velocities(numarray<numarray<vec3>>&, numarray<numarray<vec3>>&, curve_drawable_dynamic_extend&, float);
 	// void smooth_the_curve();
 	float dist(vec3 a, vec3 b);
 };
