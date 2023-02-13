@@ -10,7 +10,7 @@ using namespace cgp;
 vec3 unproject(camera_projection_orthographic const& P, mat4 const& camera_view_inverse, vec2 const& p_screen)
 {
     // Simple un-project assuming that the viewpoint is an orthogonal projection
-    vec4 const p_proj = camera_view_inverse * P.matrix_inverse() * vec4(p_screen, 0.5f, 1.0f);
+    vec4 const p_proj = camera_view_inverse * P.matrix_inverse() * vec4(p_screen, 0.0f, 1.0f);
     return p_proj.xyz();
 }
 
@@ -19,14 +19,25 @@ vec3 unproject(camera_projection_perspective const& P, mat4 const& camera_view_i
 {
     // Simple un-project assuming that the viewpoint is an orthogonal projection
     vec4 const p_proj = camera_view_inverse * P.matrix_inverse() *  vec4(p_screen, 0.5f, 1.0f);
-    return p_proj.xyz() / p_proj.w;
+    vec3 res = p_proj.xyz() / p_proj.w;
+    // std::cout << "x = " << p_screen.x << ", y = " << p_screen.y << "\n"
+    //           << "x = " << p_proj.x << ", y = " << p_proj.y << "\n"
+    //           << p_proj.w << "; " << res[2] << std::endl;
+    // std::cout << "P:\n" << P.matrix_inverse() << std::endl;
+    // std::cout << "V:\n" << camera_view_inverse << std::endl;
+    return res;
 }
+
+// vec3 unproject_test(rotation_transform const& orientation, camera_projection_perspective const& P, vec2 const& p_screen) {
+//     // return P.matrix_inverse() * vec4(orientation * vec3(p_screen, 0.0f), 0.0f);
+//     return vec3(p_screen, 0.0f);
+// }
 
 
 void scene_structure::initialize()
 {
     // Uncomment this line if using an orthographic projection
-    //camera_projection = camera_projection_orthographic{ -1.1f, 1.1f, -1.1f, 1.1f, -10, 10, window.aspect_ratio() };
+    // camera_projection = camera_projection_orthographic{ -1.1f, 1.1f, -1.1f, 1.1f, -10, 10, window.aspect_ratio() };
 
     camera_control.initialize(inputs, window); // Give access to the inputs and window global state to the camera controler
     camera_control.set_rotation_axis_y();
@@ -41,16 +52,11 @@ void scene_structure::initialize()
     fish.texture.load_and_initialize_texture_2d_on_gpu(path_info::assets + "fish.png");
 
     numarray<vec3> grid_points;
-    int const grid_resolution = 5.0f;
-    for (float i = 1; i < grid_resolution; ++i) {
-        std::cout << "i in grid: " << i << std::endl;
+    float const grid_resolution = 20.0f;
+    for (float i = 0; i <= grid_resolution; ++i) {
         float p = i * 2.0f / grid_resolution - 1.0f;
-        std::cout << "Grid index " << p << std::endl;
-        // grid_points.push_back({p, -1.f, 0.f});
-        // grid_points.push_back({p, 1.f, 0.f});
-        // grid_points.push_back({-1.f, p, 0.f});
-        // grid_points.push_back({1.f, p, 0.f});
-        
+
+        // std::cout << "cube" << std::endl;
         grid_points.push_back(unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(p, -1.f)));
         grid_points.push_back(unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(p, 1.f)));
         grid_points.push_back(unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(-1.f, p)));
@@ -59,9 +65,14 @@ void scene_structure::initialize()
     grid.initialize_data_on_gpu(grid_points);
     grid.display_type = curve_drawable_display_type::Segments;
     
-    normals = curve_drawable_dynamic_extend();
-    normals.initialize_data_on_gpu();
-    normals.display_type = curve_drawable_display_type::Segments;
+    velocities_drawable = curve_drawable_dynamic_extend();
+    velocities_drawable.initialize_data_on_gpu();
+    velocities_drawable.display_type = curve_drawable_display_type::Segments;
+    
+    accelerations_drawable = curve_drawable_dynamic_extend();
+    accelerations_drawable.initialize_data_on_gpu();
+    accelerations_drawable.display_type = curve_drawable_display_type::Segments;
+    accelerations_drawable.color = {0.0f, 1.0f, 0.0f};
 }
 
 void scene_structure::display_frame()
@@ -75,7 +86,8 @@ void scene_structure::display_frame()
         draw(grid, environment);
     }
 
-    draw(normals, environment);
+    draw(velocities_drawable, environment);
+    draw(accelerations_drawable, environment);
     
     for (int k = 0; k < sketch_drawable.size(); ++k) {
         draw(sketch_drawable[k], environment);
@@ -97,6 +109,7 @@ void scene_structure::display_gui()
             sketch_drawable[N_stroke - 1].clear();
             sketch_drawable.resize(N_stroke - 1);
             sketches.resize(N_stroke - 1);
+            // how to remove velocities_drawable?
         }
     }
 
@@ -110,7 +123,9 @@ void scene_structure::mouse_move_event()
         if (inputs.mouse.click.left) {
             // Add the new clicked position
             int k_sketch = sketch_drawable.size() - 1;
+            // std::cout << "curve" << std::endl;
             vec3 const p = unproject(camera_projection, camera_control.camera_model.matrix_frame(), inputs.mouse.position.current);
+            // vec3 const p = unproject_test(camera_control.camera_model.orientation(), camera_projection, inputs.mouse.position.current);
             sketches[k_sketch].push_back(p);
             sketch_drawable[k_sketch].push_back(p);
             sketch_drawable[k_sketch].color = { 0.5f, 0.5f, 1.0f };
@@ -132,8 +147,9 @@ void scene_structure::mouse_click_event()
             sketch_drawable[k_sketch].initialize_data_on_gpu();
 
             // Add the new clicked position
-            std::cout << inputs.mouse.position.current << std::endl;
+            // std::cout << "curve" << std::endl;
             vec3 const p = unproject(camera_projection, camera_control.camera_model.matrix_frame(), inputs.mouse.position.current);
+            // vec3 const p = unproject_test(camera_control.camera_model.orientation(), camera_projection, inputs.mouse.position.current);
             sketch_drawable[k_sketch].push_back(p);
             
             numarray<vec3> const new_curve = { p };
@@ -142,27 +158,50 @@ void scene_structure::mouse_click_event()
     }
 }
 
-void scene_structure::compute_tangents() {
-    float resolution = 7;
-
+void scene_structure::compute_velocities() {
     for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
-        int n = sketches[i_sketch].size();
-        for (float i_point = 1; i_point < resolution; ++i_point) {
-            int i_cur = i_point / resolution * n;
+        // float resolution = 7;
+        numarray<vec3> curve = sketches[i_sketch];
+        int n = curve.size();
 
-            std::cout << i_sketch << " " << i_point << " " << i_cur << std::endl;
-            std::cout << sketches[i_sketch][i_cur] << std::endl;
+        // for (float i_point = 1; i_point < resolution; ++i_point) {
+        //     int i_cur = i_point / resolution * n;
 
-            vec3 normal = sketches[i_sketch][i_cur] - sketches[i_sketch][i_cur - 1];
-            // float const L = norm(normal);
-			// if(L > 1e-6f) {
-			// 	   normal /= L;
-            //     std::cout << "normalization of normal" << std::endl;
-            // }
+        for (int i_cur = 0; i_cur < n; ++i_cur) {
 
-            // to draw normal
-            normals.push_back(sketches[i_sketch][i_cur]);
-            normals.push_back(13 * normal + sketches[i_sketch][i_cur]);
+            float const sigma = 0.001;
+
+            vec3 vel(0.0f, 0.0f, 0.0f);
+            // vec3 accel(0.0f, 0.0f, 0.0f);
+
+            float sum_w = 0.0;
+            int j = i_cur;
+            while (j > 0 && j + 1 < n && dist(curve[i_cur], curve[j]) <= 3 * sigma) {
+                float d = dist(curve[i_cur], curve[j]);
+                float w = exp(-d * d / (sigma * sigma));
+                vel += w * (curve[j] - curve[j - 1]);
+                // accel += w * (curve[j + 1] - 2 * curve[j] + curve[j - 1]);
+                sum_w += w;
+                ++j;
+            }
+
+            j = i_cur - 1;
+            while (j > 0 && j + 1 < n && dist(curve[i_cur], curve[j - 1]) <= 3 * sigma) {
+                float d = dist(curve[i_cur], curve[j - 1]);
+                float w = exp(-d * d / (sigma * sigma));
+                vel += w * (curve[j] - curve[j - 1]);
+                // accel += w * (curve[j + 1] - 2 * curve[j] + curve[j - 1]);
+                sum_w += 1;
+                --j;
+            }
+
+            vel /= sum_w;
+
+            velocities_drawable.push_back(curve[i_cur]);
+            velocities_drawable.push_back(vel * 20 + curve[i_cur]);
+
+            // accelerations_drawable.push_back(curve[i_cur]);
+            // accelerations_drawable.push_back(curve[i_cur] + accel * 20);
         }
     }
 }
@@ -173,8 +212,18 @@ void scene_structure::keyboard_event()
 
     if (inputs.keyboard.is_pressed(GLFW_KEY_T)) {
         std::cout << "T is pressed, let's show tangents" << std::endl;
-        compute_tangents();
+        compute_velocities();
     }
+
+    // if (inputs.keyboard.is_pressed(GLFW_KEY_R)) {
+    //     velocities_drawable.clear();
+    //     accelerations_drawable.clear();
+    //     for (int i = 0; i < sketch_drawable.size(); ++i) {
+    //         sketch_drawable[i].clear();
+    //     }
+    //     sketch_drawable.clear();
+    //     sketches.clear();
+    // }
 }
 
 void scene_structure::idle_frame()
@@ -182,3 +231,6 @@ void scene_structure::idle_frame()
     camera_control.idle_frame(environment.camera_view);
 }
 
+float scene_structure::dist(vec3 a, vec3 b) {
+    return norm(a - b);
+}
