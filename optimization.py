@@ -30,7 +30,7 @@ with open("accelerations") as acc_file:
             v = list(map(float, line[1].split()[:2]))
             a = list(map(float, line[2].split()[:2]))
 
-            # Stock's low for the simplest case of a sphere
+            # Stock's law for the simplest case of a sphere
             u = [a[i] * m / (6. * nu * np.pi * R) - v[i] for i in range(len(a))]
 
             V.append(v)

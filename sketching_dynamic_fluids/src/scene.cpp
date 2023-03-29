@@ -19,21 +19,70 @@ vec3 unproject(camera_projection_orthographic const& P, mat4 const& camera_view_
 vec3 unproject(camera_projection_perspective const& P, mat4 const& camera_view_inverse, vec2 const& p_screen)
 {
     // Simple un-project assuming that the viewpoint is an orthogonal projection
-    vec4 const p_proj = camera_view_inverse * P.matrix_inverse() *  vec4(p_screen, 0.5f, 1.0f);
+    vec4 const p_proj = camera_view_inverse * P.matrix_inverse() * vec4(p_screen, 0.5f, 1.0f);
     vec3 res = p_proj.xyz() / p_proj.w;
-    // std::cout << "x = " << p_screen.x << ", y = " << p_screen.y << "\n"
+    // std::cout << "x = " << p_screen.x << ", y = "  < p_screen.y << "\n"
     //           << "x = " << p_proj.x << ", y = " << p_proj.y << "\n"
     //           << p_proj.w << "; " << res[2] << std::endl;
     // std::cout << "P:\n" << P.matrix_inverse() << std::endl;
-    // std::cout << "V:\n" << camera_view_inverse << std::endl;
     return res;
 }
 
-// vec3 unproject_test(rotation_transform const& orientation, camera_projection_perspective const& P, vec2 const& p_screen) {
-//     // return P.matrix_inverse() * vec4(orientation * vec3(p_screen, 0.0f), 0.0f);
-//     return vec3(p_screen, 0.0f);
-// }
+vec2 scene_structure::get_cell(vec3 p) {
+    int x = (p.x - left_bot.x) / grid_step;
+    int y = (p.y - left_bot.y) / grid_step;
+    std::cout << "Point " << p << " is in the cell: " << x << ", " << y << std::endl;
+    return {x, y};
+}
 
+void scene_structure::create_square_object(int h, vec3 p) {
+    solid_boundary.clear();
+    solid_inner.clear();
+
+    vec2 p_cell = get_cell(p);
+    int x = p_cell.x;
+    int y = p_cell.y;
+
+    for (int dx = -h; dx <= h; ++dx) {
+        for (int dy = -h; dy <= h; ++dy) {
+            vec2 body_point = vec2(x + dx, y + dy);
+            bool boundary = false;
+            vec2 normal = vec2(0.f, 0.f);
+
+            if (x + dx == x - h) {
+                boundary = true;
+                normal.x = -1.;
+            }
+            if (x + dx == x + h) {
+                boundary = true;
+                normal.x = 1.;
+            }
+            if (p.y + dy == p.y - h) {
+                boundary = true;
+                normal.y = -1.;
+            }
+            if (p.y + dy == p.y + h) {
+                boundary = true;
+                normal.y = 1.;
+            }
+            
+            if (boundary) {
+                solid_boundary.push_back({body_point, normal});
+                std::cout << "normal of " << body_point << " is: " << normal << std::endl;
+            } else {
+                solid_inner.push_back(body_point);
+            }
+        }
+    }
+}
+
+numarray<vec3> scene_structure::solid_boundary_3d() {
+    numarray<vec3> ret;
+    for (auto& p : solid_boundary) {
+        ret.push_back(vec3(p.first, 0.0f));
+    }
+    return ret;
+}
 
 void scene_structure::initialize()
 {
@@ -65,6 +114,17 @@ void scene_structure::initialize()
     }
     grid.initialize_data_on_gpu(grid_points);
     grid.display_type = curve_drawable_display_type::Segments;
+
+    left_bot = unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(-1.f, -1.f));
+    left_top = unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(-1.f, 1.f));
+    right_top = unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(1.f, 1.f));
+    right_bot = unproject(camera_projection, camera_control.camera_model.matrix_frame(), vec2(1.f, -1.f));
+
+    grid_step = (right_top[0] - left_top[0]) / grid_resolution;
+
+    // grid_cell_size = (grid_points[1] - grid_points[0]).y;
+	// points_on_grid.resize(grid_resolution, grid_resolution);
+    // points_on_grid.fill(std::set<int>());
     
     velocities_drawable = curve_drawable_dynamic_extend();
     velocities_drawable.initialize_data_on_gpu();
@@ -74,6 +134,9 @@ void scene_structure::initialize()
     accelerations_drawable.initialize_data_on_gpu();
     accelerations_drawable.display_type = curve_drawable_display_type::Segments;
     accelerations_drawable.color = {0.0f, 1.0f, 0.0f};
+
+    // create_square_object(1, {0, 0, 0});
+    // solid_drawable.initialize_data_on_gpu(solid_boundary_3d());
 }
 
 void scene_structure::display_frame()
@@ -82,6 +145,7 @@ void scene_structure::display_frame()
     environment.light = camera_control.camera_model.position();
     
     draw(fish, environment);
+    // draw(solid_drawable, environment);
 
     if (gui.show_grid) {
         draw(grid, environment);
@@ -165,7 +229,13 @@ void scene_structure::mouse_click_event()
     }
 }
 
-void scene_structure::compute_velocities(numarray<numarray<vec3>>& points, numarray<numarray<vec3>>& vels, curve_drawable_dynamic_extend& vel_drawable, float coef) {
+/* for each stroke compute the speed of changing the vectors in points,
+   store it in vels and add to vel_drawable do draw */
+void scene_structure::compute_velocities(numarray<numarray<vec3>>& points,
+                                         numarray<numarray<vec3>>& vels,
+                                         curve_drawable_dynamic_extend& vel_drawable,
+                                         float coef)
+{
     for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
         // float resolution = 7;
         numarray<vec3> curve = sketches[i_sketch];
@@ -215,9 +285,10 @@ void scene_structure::keyboard_event()
 
     if (inputs.keyboard.is_pressed(GLFW_KEY_T)) {
         std::cout << "T is pressed, let's show tangents" << std::endl;
+        // computes all the velocities every time, not only last
         // not implemented yet: smooth_curves();
-        compute_velocities(sketches, velocities, velocities_drawable, 0.0002);
-        compute_velocities(velocities, accelerations, accelerations_drawable, 0.0000001);
+        compute_velocities(sketches, velocities, velocities_drawable, 0.1);
+        compute_velocities(velocities, accelerations, accelerations_drawable, 0.005);
     }
 
     // if (inputs.keyboard.is_pressed(GLFW_KEY_R)) {
@@ -230,17 +301,77 @@ void scene_structure::keyboard_event()
     //     sketches.clear();
     // }
 
+    if (inputs.keyboard.is_pressed(GLFW_KEY_S)) {
+        std::cout << "S is pressed, let's print info about the solid" << std::endl;
+
+        vec3 p = vec3(0, 0, 0);
+        std::cout << "At position:\n" << p << std::endl;
+        create_square_object(1, p);
+        std::cout << "Boundary cells:\n";
+        for (auto& v : solid_boundary) {
+            std::cout << v.first << std::endl;
+        }
+        std::cout << "Inner cells:\n";
+        for (vec2 v : solid_inner) {
+            std::cout << v << std::endl;
+        }
+    }
+
+    /* print info taken from sketches to file
+       the format is:
+
+       #num of body boundary cells
+       #num of body inner cells
+       #num of curves
+       list of normals on boundary cells
+       * then for each curve: *
+        #num of points in a curve
+        list of cells with body boundaries
+        list of cells with body inner points
+        body velocity
+        body acceleration
+    
+     */
     if (inputs.keyboard.is_pressed(GLFW_KEY_P)) {
         std::cout << "P is pressed, let's print all points to the file" << std::endl;
-        std::ofstream logFile("../../accelerations", std::ios::out);
+        auto t = std::time(nullptr);
+        auto tm = *std::localtime(&t);
+        std::ostringstream oss;
+        oss << std::put_time(&tm, "../../accelerations_%H_%M_%S_%d_%m_%Y");
+        std::ofstream logFile(oss.str(), std::ios::out);
+
+        logFile << solid_boundary.size() << std::endl;
+        logFile << solid_inner.size() << std::endl;
         logFile << sketches.size() << std::endl;
-        for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
-            logFile << sketches[i_sketch].size() << std::endl;
-            for (int i_point = 0; i_point < sketches[i_sketch].size(); ++i_point) {
-                logFile << sketches[i_sketch][i_point] << ";" << velocities[i_sketch][i_point] << ";" << accelerations[i_sketch][i_point] << std::endl;
-            }
+
+        for (auto& v : solid_boundary) {
+            logFile << v.second << std::endl;
         }
 
+        for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
+            logFile << sketches[i_sketch].size() << std::endl;
+
+            for (int i_point = 0; i_point < sketches[i_sketch].size(); ++i_point) {
+                if (std::isnan(accelerations[i_sketch][i_point][0])) {
+                    continue;
+                }
+
+                create_square_object(1, sketches[i_sketch][i_point]);
+
+                for (auto& v : solid_boundary) {
+                    logFile << v.first << std::endl;
+                }
+
+                logFile << solid_inner.size() << std::endl;
+                for (vec2 v : solid_inner) {
+                    logFile << v << std::endl;
+                }
+
+                // logFile << sketches[i_sketch][i_point] << ";" << velocities[i_sketch][i_point] << ";" << accelerations[i_sketch][i_point] << std::endl;
+                logFile << velocities[i_sketch][i_point] << std::endl;
+                logFile << accelerations[i_sketch][i_point] << std::endl;
+            }
+        }
         logFile.close();
     }
 }
