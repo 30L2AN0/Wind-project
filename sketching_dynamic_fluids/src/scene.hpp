@@ -42,16 +42,18 @@ struct scene_structure : cgp::scene_inputs_generic {
 	cgp::numarray<cgp::curve_drawable_dynamic_extend> sketch_drawable;
 	// save the curve elements
 	numarray<numarray<vec3>> sketches;
+
+	// solid positions and normals
+	numarray<std::pair<vec2, vec2>> solid_boundary;
 	numarray<vec2> solid_inner;
 
-	// positions and normals
-	numarray<std::pair<vec2, vec2>> solid_boundary;
-
+	// grid info
 	float grid_cell_size;
 	curve_drawable grid;
 	// grid_2D<std::set<int>> points_on_grid;
 	vec3 left_top, left_bot, right_top, right_bot;
 	double grid_step;
+    float grid_resolution;
 
 	numarray<numarray<float>> dtimes;
 	numarray<numarray<vec3>> velocities;
