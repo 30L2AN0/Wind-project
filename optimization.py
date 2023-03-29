@@ -24,11 +24,9 @@ Velocities = np.array([])
 Normals = np.array([])
 BodyNormals = []
 
-N_boundary_cells = 0
-N_inner_cells = 0
-
 file = input()
-print("Reading", file)
+print("Opening file:", file)
+print("Reading...")
 with open(file) as acc_file:
     N_boundary_cells = int(acc_file.readline())
     N_inner_cells = int(acc_file.readline())
@@ -71,6 +69,10 @@ with open(file) as acc_file:
                     #     for j in range(grid_res):
                     #         print(frame[(i * grid_res + j) * 2 + 1], end=' ')
                     #     print()
+
+print('Finished reading, total:')
+print('Velocities shape:', Velocities.shape)
+print('Normals shape:', Normals.shape)
 
 
 # #######################################################
