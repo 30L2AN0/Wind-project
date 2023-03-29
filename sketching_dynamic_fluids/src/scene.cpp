@@ -229,7 +229,6 @@ void scene_structure::mouse_click_event()
     }
 }
 
-<<<<<<< HEAD
 /* for each stroke compute the speed of changing the vectors in points,
    store it in vels and add to vel_drawable do draw */
 void scene_structure::compute_velocities(numarray<numarray<vec3>>& points,
@@ -237,9 +236,6 @@ void scene_structure::compute_velocities(numarray<numarray<vec3>>& points,
                                          curve_drawable_dynamic_extend& vel_drawable,
                                          float coef)
 {
-=======
-void scene_structure::compute_velocities(numarray<numarray<vec3>>& points, numarray<numarray<vec3>>& vels, curve_drawable_dynamic_extend& vel_drawable, float coef) {
->>>>>>> d43a498e60845041f61454282d93c8611297292d
     for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
         // float resolution = 7;
         numarray<vec3> curve = sketches[i_sketch];
@@ -289,16 +285,10 @@ void scene_structure::keyboard_event()
 
     if (inputs.keyboard.is_pressed(GLFW_KEY_T)) {
         std::cout << "T is pressed, let's show tangents" << std::endl;
-<<<<<<< HEAD
         // computes all the velocities every time, not only last
         // not implemented yet: smooth_curves();
         compute_velocities(sketches, velocities, velocities_drawable, 0.1);
         compute_velocities(velocities, accelerations, accelerations_drawable, 0.005);
-=======
-        // not implemented yet: smooth_curves();
-        compute_velocities(sketches, velocities, velocities_drawable, 0.0002);
-        compute_velocities(velocities, accelerations, accelerations_drawable, 0.0000001);
->>>>>>> d43a498e60845041f61454282d93c8611297292d
     }
 
     // if (inputs.keyboard.is_pressed(GLFW_KEY_R)) {
@@ -311,7 +301,6 @@ void scene_structure::keyboard_event()
     //     sketches.clear();
     // }
 
-<<<<<<< HEAD
     if (inputs.keyboard.is_pressed(GLFW_KEY_S)) {
         std::cout << "S is pressed, let's print info about the solid" << std::endl;
 
@@ -383,19 +372,6 @@ void scene_structure::keyboard_event()
                 logFile << accelerations[i_sketch][i_point] << std::endl;
             }
         }
-=======
-    if (inputs.keyboard.is_pressed(GLFW_KEY_P)) {
-        std::cout << "P is pressed, let's print all points to the file" << std::endl;
-        std::ofstream logFile("../../accelerations", std::ios::out);
-        logFile << sketches.size() << std::endl;
-        for (int i_sketch = 0; i_sketch < sketches.size(); ++i_sketch) {
-            logFile << sketches[i_sketch].size() << std::endl;
-            for (int i_point = 0; i_point < sketches[i_sketch].size(); ++i_point) {
-                logFile << sketches[i_sketch][i_point] << ";" << velocities[i_sketch][i_point] << ";" << accelerations[i_sketch][i_point] << std::endl;
-            }
-        }
-
->>>>>>> d43a498e60845041f61454282d93c8611297292d
         logFile.close();
     }
 }

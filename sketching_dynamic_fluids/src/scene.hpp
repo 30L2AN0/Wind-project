@@ -49,13 +49,10 @@ struct scene_structure : cgp::scene_inputs_generic {
 
 	float grid_cell_size;
 	curve_drawable grid;
-<<<<<<< HEAD
 	// grid_2D<std::set<int>> points_on_grid;
 	vec3 left_top, left_bot, right_top, right_bot;
 	double grid_step;
 
-=======
->>>>>>> d43a498e60845041f61454282d93c8611297292d
 	numarray<numarray<float>> dtimes;
 	numarray<numarray<vec3>> velocities;
 	numarray<numarray<vec3>> accelerations;
