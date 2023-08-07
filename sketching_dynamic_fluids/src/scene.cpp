@@ -203,6 +203,7 @@ void scene_structure::mouse_move_event()
             camera_control.action_mouse_move(environment.camera_view);
     }
 }
+
 void scene_structure::mouse_click_event()
 {
     if (!inputs.mouse.on_gui) {
@@ -328,8 +329,10 @@ void scene_structure::keyboard_event()
         * then for each curve: *
             #num of points in a curve
             * for each point *
+                dt
                 list of cells with body boundaries (2d)
                 list of cells with body inner points (2d)
+                point on the curve coordinates (3d)
                 body velocity (3d)
                 body acceleration (3d)
     
@@ -362,6 +365,8 @@ void scene_structure::keyboard_event()
                 //     continue;
                 // }
 
+                logFile << dtimes[i_sketch][i_point] << std::endl;
+
                 create_square_object(1, sketches[i_sketch][i_point]);
 
                 for (auto& v : solid_boundary) {
@@ -373,6 +378,7 @@ void scene_structure::keyboard_event()
                 }
 
                 // logFile << sketches[i_sketch][i_point] << ";" << velocities[i_sketch][i_point] << ";" << accelerations[i_sketch][i_point] << std::endl;
+                logFile << sketches[i_sketch][i_point] << std::endl;
                 logFile << velocities[i_sketch][i_point] << std::endl;
                 logFile << accelerations[i_sketch][i_point] << std::endl;
             }
